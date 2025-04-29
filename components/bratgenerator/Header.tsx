@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Header() {
   return (
@@ -14,7 +15,16 @@ export default function Header() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            bratgenerators
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.png"
+                alt="Brat Text Generator Logo"
+                width={40}
+                height={40}
+                className="rounded-full"
+              />
+              <span>Brat Text Generator</span>
+            </div>
           </motion.h1>
         </Link>
       </div>

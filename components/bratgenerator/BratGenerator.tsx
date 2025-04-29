@@ -20,7 +20,6 @@ import { colorPresets } from '@/lib/presets';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import html2canvas from 'html2canvas';
-import { Image } from 'image-js';
 
 export default function BratGenerator() {
   const [text, setText] = useState('brat');
@@ -74,23 +73,63 @@ export default function BratGenerator() {
 
   const renderArt = async () => {
     if (!previewRef.current) return null;
-    const canvas = await html2canvas(previewRef.current);
-    let image = await Image.load(canvas.toDataURL('image/png'));
-    const originalWidth = image.width;
-    image = image
-      .resize({ preserveAspectRatio: true, width: originalWidth * 0.85 })
-      .resize({ preserveAspectRatio: true, width: originalWidth })
-      .blurFilter({ radius: 2 });
-    return image;
+    const canvas = await html2canvas(previewRef.current, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      logging: false,
+      imageTimeout: 0,
+      removeContainer: true,
+      onclone: (clonedDoc) => {
+        // 确保字体正确加载
+        const style = document.createElement('style');
+        style.textContent = `
+          @font-face {
+            font-family: 'Arial Narrow';
+            src: local('Arial Narrow');
+          }
+        `;
+        clonedDoc.head.appendChild(style);
+      }
+    });
+
+    // 创建临时 canvas 用于应用模糊效果
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return canvas;
+
+    // 设置临时 canvas 尺寸
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+
+    // 应用模糊效果
+    tempCtx.filter = 'blur(2px)';
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // 应用缩放效果
+    const finalCanvas = document.createElement('canvas');
+    const finalCtx = finalCanvas.getContext('2d');
+    if (!finalCtx) return tempCanvas;
+
+    finalCanvas.width = canvas.width;
+    finalCanvas.height = canvas.height;
+
+    // 绘制缩放后的图像
+    finalCtx.scale(0.85, 0.85);
+    finalCtx.drawImage(tempCanvas, 0, 0);
+    finalCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+    return finalCanvas;
   };
 
   const downloadImage = async () => {
     try {
-      const image = await renderArt();
-      if (!image) return;
+      const canvas = await renderArt();
+      if (!canvas) return;
       
       const link = document.createElement('a');
-      link.href = image.toDataURL();
+      link.href = canvas.toDataURL('image/png');
       link.download = `${text}.png`;
       link.click();
       
@@ -110,10 +149,15 @@ export default function BratGenerator() {
 
   const copyToClipboard = async () => {
     try {
-      const image = await renderArt();
-      if (!image) return;
+      const canvas = await renderArt();
+      if (!canvas) return;
       
-      const blob = await image.toBlob('image/png', 1.0);
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, 'image/png', 1.0);
+      });
+      
       const item = new ClipboardItem({ 'image/png': blob });
       await navigator.clipboard.write([item]);
       
@@ -140,11 +184,11 @@ export default function BratGenerator() {
         <div className="shadow-lg mb-8">
           <div 
             ref={previewRef}
-            className="w-96 h-96 flex items-center justify-center p-4 relative"
+            className="preview-container w-96 h-96 flex items-center justify-center p-4 relative"
             style={{ 
               backgroundColor: bgColor,
               color: textColor,
-              fontFamily: "'Arial Narrow'",
+              fontFamily: "'Arial Narrow', Arial, sans-serif",
               textShadow: '3px 3px 0px rgba(0,0,0,0.2)',
               letterSpacing: '3px',
               filter: 'blur(2px)',
@@ -152,7 +196,9 @@ export default function BratGenerator() {
               fontSize: `${fontSize}rem`,
               fontWeight: '400',
               lineHeight: '1',
-              textTransform: 'uppercase'
+              textTransform: 'uppercase',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
             }}
           >
             <div 
@@ -160,7 +206,7 @@ export default function BratGenerator() {
                 ${centerText ? 'items-center' : ''}
                 ${mirrorText ? 'transform scale-x-[-1]' : ''}`}
             >
-              {text.split(' ').map((word, index) => (
+              {text.split('\n').map((line, index) => (
                 <div 
                   key={index} 
                   className={`${centerText ? "text-center" : "text-left"} whitespace-normal break-words`}
@@ -170,7 +216,7 @@ export default function BratGenerator() {
                     overflowWrap: 'break-word'
                   }}
                 >
-                  {word}
+                  {line}
                 </div>
               ))}
             </div>
@@ -184,12 +230,13 @@ export default function BratGenerator() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="text-input">Text</Label>
-                <Input
+                <textarea
                   id="text-input"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  className="bg-white/80"
+                  className="w-full h-24 p-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Enter your text"
+                  style={{ resize: 'none' }}
                 />
               </div>
               

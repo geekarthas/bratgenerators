@@ -6,13 +6,32 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'bratgenerators - Brat Text Generator',
-  description: 'Create stylish brat text with custom colors and effects. Generate unique brat text images for social media and more.',
-  keywords: 'brat text generator, brat text, text generator, brat summer, text effects, custom text, social media text',
+  metadataBase: new URL('https://bratgenerators.net'),
+  title: 'Brat Text Generator',
+  description: 'Generate stylish brat text with custom colors and effects',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
   openGraph: {
-    title: 'bratgenerators - Brat Text Generator',
-    description: 'Create stylish brat text with custom colors and effects. Generate unique brat text images for social media and more.',
+    title: 'Brat Text Generator',
+    description: 'Generate stylish brat text with custom colors and effects',
     type: 'website',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Brat Text Generator',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Brat Text Generator',
+    description: 'Generate stylish brat text with custom colors and effects',
+    images: ['/logo.png'],
   },
 };
 
@@ -23,6 +42,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+      </head>
       <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>
